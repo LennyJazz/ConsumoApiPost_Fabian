@@ -21,66 +21,72 @@ import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.Map;
 
-
-
 public class MainActivity extends AppCompatActivity {
 
-    private EditText editTextTitle;
-    private EditText editTextBody;
-    private Button buttonSubmit;
+    private EditText editTextPostId;
+    private EditText editTextNewTitle;
+    private EditText editTextNewBody;
+    private Button buttonUpdate;
     private TextView textViewApiResult;
 
     private RequestQueue requestQueue;
 
-    // URL de la API de JSONPlaceholder para posts (la misma que para GET)
-    private static final String API_URL = "https://jsonplaceholder.typicode.com/posts";
+    // URL base de la API de JSONPlaceholder para posts
+    private static final String BASE_API_URL = "https://jsonplaceholder.typicode.com/posts/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        editTextTitle = findViewById(R.id.editTextTitle);
-        editTextBody = findViewById(R.id.editTextBody);
-        buttonSubmit = findViewById(R.id.buttonSubmit);
+        editTextPostId = findViewById(R.id.editTextPostId);
+        editTextNewTitle = findViewById(R.id.editTextNewTitle);
+        editTextNewBody = findViewById(R.id.editTextNewBody);
+        buttonUpdate = findViewById(R.id.buttonUpdate);
         textViewApiResult = findViewById(R.id.textViewApiResult);
 
         // Inicializar la cola de solicitudes de Volley
         requestQueue = Volley.newRequestQueue(this);
 
-        buttonSubmit.setOnClickListener(new View.OnClickListener() {
+        buttonUpdate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Obtener los datos del usuario
-                String title = editTextTitle.getText().toString().trim();
-                String body = editTextBody.getText().toString().trim();
+                String postId = editTextPostId.getText().toString().trim();
+                String newTitle = editTextNewTitle.getText().toString().trim();
+                String newBody = editTextNewBody.getText().toString().trim();
 
-                if (title.isEmpty() || body.isEmpty()) {
+                if (postId.isEmpty() || newTitle.isEmpty() || newBody.isEmpty()) {
                     Toast.makeText(MainActivity.this, "Por favor, complete todos los campos", Toast.LENGTH_SHORT).show();
                 } else {
-                    // Llamar al método para crear el post
-                    createPost(title, body);
+                    // Llamar al método para actualizar el post
+                    updatePost(postId, newTitle, newBody);
                 }
             }
         });
     }
 
-    private void createPost(String title, String body) {
+    private void updatePost(String postId, String newTitle, String newBody) {
+        // Construir la URL completa para el post específico
+        String apiUrl = BASE_API_URL + postId;
+
         // Construir el objeto JSON que se enviará en el cuerpo de la solicitud
         JSONObject postData = new JSONObject();
         try {
-            postData.put("title", title);
-            postData.put("body", body);
-            postData.put("userId", 1); // JSONPlaceholder requiere un userId
+            // Para una solicitud PUT, generalmente se envían todos los campos que se quieren actualizar.
+            // JSONPlaceholder requiere el userId, incluso si no lo actualizamos.
+            postData.put("id", Integer.parseInt(postId)); // Asegurarse de enviar el ID en el cuerpo también si la API lo espera
+            postData.put("title", newTitle);
+            postData.put("body", newBody);
+            postData.put("userId", 1); // Asumimos un userId fijo para JSONPlaceholder
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        // Crear la solicitud POST
+        // Crear la solicitud PUT
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
-                Request.Method.POST, // Método POST
-                API_URL,
-                postData, // El objeto JSON que se enviará
+                Request.Method.PUT, // Método PUT
+                apiUrl,
+                postData, // El objeto JSON con los datos actualizados
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
@@ -89,17 +95,20 @@ public class MainActivity extends AppCompatActivity {
                             String id = response.getString("id");
                             String responseTitle = response.getString("title");
                             String responseBody = response.getString("body");
+                            int userId = response.getInt("userId");
 
-                            String result = "Post creado exitosamente:\n" +
+                            String result = "Post actualizado exitosamente:\n" +
                                     "ID: " + id + "\n" +
                                     "Título: " + responseTitle + "\n" +
-                                    "Cuerpo: " + responseBody;
+                                    "Cuerpo: " + responseBody + "\n" +
+                                    "UserID: " + userId;
                             textViewApiResult.setText(result);
-                            Toast.makeText(MainActivity.this, "Post creado con ID: " + id, Toast.LENGTH_LONG).show();
+                            Toast.makeText(MainActivity.this, "Post " + id + " actualizado", Toast.LENGTH_LONG).show();
 
                             // Opcional: limpiar los campos después de un envío exitoso
-                            editTextTitle.setText("");
-                            editTextBody.setText("");
+                            editTextPostId.setText("");
+                            editTextNewTitle.setText("");
+                            editTextNewBody.setText("");
 
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -111,18 +120,16 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         // Manejar errores de la solicitud
-                        Toast.makeText(MainActivity.this, "Error al crear post: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(MainActivity.this, "Error al actualizar post: " + error.getMessage(), Toast.LENGTH_LONG).show();
                         textViewApiResult.setText("Error al conectar con la API: " + error.getMessage());
                         error.printStackTrace();
                     }
                 }
         ) {
-            // Opcional: Sobreescribir getHeaders() si necesitas añadir encabezados (ej., para autenticación)
             @Override
             public Map<String, String> getHeaders() {
                 Map<String, String> headers = new HashMap<>();
-                headers.put("Content-Type", "application/json"); // Indicamos que el cuerpo es JSON
-                // headers.put("Authorization", "Bearer your_token_here"); // Si necesitaras un token de autenticación
+                headers.put("Content-Type", "application/json");
                 return headers;
             }
         };
@@ -131,3 +138,4 @@ public class MainActivity extends AppCompatActivity {
         requestQueue.add(jsonObjectRequest);
     }
 }
+
